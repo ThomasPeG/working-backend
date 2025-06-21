@@ -17,6 +17,7 @@ export class EmployeeService {
   ) {}
 
   async create(userId: string, employeeData: CreateEmployeeDto): Promise<Response> {
+    console.log(employeeData);
     // Verificar que el usuario existe
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -30,17 +31,31 @@ export class EmployeeService {
     const employee = await this.prisma.employee.create({
       data: {
         cv: employeeData.cv,
-        interests: employeeData.interests,
-        skills: employeeData.skills,
+        skills: employeeData.skills || [],
+        jobInterests: employeeData.jobInterests || [],
         user: {
           connect: { id: userId }
         }
+      },
+    });
+    
+    // Devolver el usuario actualizado con su perfil de empleado
+    const updatedUser = await this.prisma.user.findUnique({
+      where: { id: employee.id },
+      include: {
+        employeeProfile: {
+          include: {
+            experiences: true,
+            education: true
+          }
+        }
       }
     });
-    const payload = { userId: employee.userId, sub: employee.id };
+    
+    const payload = { email: updatedUser!.email, sub: updatedUser!.id };
     return {
       access_token: this.jwtService.sign(payload),
-      data: {employee},
+      data: { user: updatedUser },
       message: 'Perfil de empleado creado exitosamente',
     };
   }
@@ -77,7 +92,7 @@ export class EmployeeService {
       where: { id },
       data: {
         cv: updateEmployeeDto.cv,
-        interests: updateEmployeeDto.interests,
+        jobInterests: updateEmployeeDto.jobInterests,
         skills: updateEmployeeDto.skills
         // Nota: Para actualizar relaciones como experiences o education,
         // necesitarías usar operaciones más complejas como upsert, connect, disconnect, etc.
@@ -133,32 +148,32 @@ export class EmployeeService {
     };
   }
 
-  // async addEducation(employeeId: string, educationData: CreateEducationDto): Promise<Response> {
-  //   // Verificar que el empleado existe
-  //   const employee = await this.prisma.employee.findUnique({
-  //     where: { id: employeeId }
-  //   });
+  async addEducation(employeeId: string, educationData: CreateEducationDto): Promise<Response> {
+    // Verificar que el empleado existe
+    const employee = await this.prisma.employee.findUnique({
+      where: { id: employeeId }
+    });
 
-  //   if (!employee) {
-  //     throw new NotFoundException(`Perfil de empleado con ID ${employeeId} no encontrado`);
-  //   }
+    if (!employee) {
+      throw new NotFoundException(`Perfil de empleado con ID ${employeeId} no encontrado`);
+    }
 
-  //   // Crear el registro educativo
-  //   const createEducation = await this.prisma.education.create({
-  //     data: {
-  //       ...educationData,
-  //       employee: {
-  //         connect: { id: employee.id }
-  //       }
-  //     }
-  //   });
-  //   const payload = { title: createEducation.educationType, sub: createEducation.id };
-  //   return {
-  //     access_token: this.jwtService.sign(payload),
-  //     data: { education: createEducation },
-  //     message: 'Registro educativo agregado exitosamente',
-  //   };
-  // }
+    // Crear el registro educativo
+    const createEducation = await this.prisma.education.create({
+      data: {
+        ...educationData,
+        employee: {
+          connect: { id: employee.id }
+        }
+      }
+    });
+    const payload = { title: createEducation.educationType, sub: createEducation.id };
+    return {
+      access_token: this.jwtService.sign(payload),
+      data: { education: createEducation },
+      message: 'Registro educativo agregado exitosamente',
+    };
+  }
 
   // También podemos agregar funciones para actualizar y eliminar experiencias y educación
   

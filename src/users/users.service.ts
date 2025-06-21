@@ -36,6 +36,14 @@ export class UsersService {
   async findOne(id: string): Promise<Response> {
     const user = await this.prisma.user.findUnique({
       where: { id },
+      include: {
+        employeeProfile: {
+          include: {
+            experiences: true,
+            education: true
+          }
+        }
+      }
     });
     
     if (!user) {
@@ -52,6 +60,14 @@ export class UsersService {
   async findByEmail(email: string): Promise<Response> {
     const user = await this.prisma.user.findUnique({
       where: { email },
+      include: {
+        employeeProfile: {
+          include: {
+            experiences: true,
+            education: true
+          }
+        }
+      }
     });
     if (!user) {
       throw new NotFoundException(`Usuario con email ${email} no encontrado`);
@@ -68,6 +84,14 @@ export class UsersService {
     const updatedUser = await this.prisma.user.update({
       where: { id },
       data: user,
+      include: {
+        employeeProfile: {
+          include: {
+            experiences: true,
+            education: true
+          }
+        }
+      }
     });
     const payload = { email: updatedUser.email, sub: updatedUser.id };
     return {

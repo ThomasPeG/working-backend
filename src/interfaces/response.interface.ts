@@ -6,16 +6,16 @@ import { Experience } from "./experience.interface";
 
 export interface Response {
   access_token: string | null;
-  data: null | 
-              {user: User} | 
-              {users: User[]} | 
-              {job: Job} |
-              {jobs: Job[]}|
-              {employee: Employee}|
-              {employees: Employee[]}|
-              {education: Education}|
-              {education: Education[]}|
-              {experience: Experience}|
-              {experience: Experience[]};
+  data: any
+              // {user: User} | 
+              // {users: User[]} | 
+              // {job: Job} |
+              // {jobs: Job[]}|
+              // {employee: Employee}|
+              // {employees: Employee[]}|
+              // {education: Education}|
+              // {education: Education[]}|
+              // {experience: Experience}|
+              // {experience: Experience[]};
   message: string;
 }

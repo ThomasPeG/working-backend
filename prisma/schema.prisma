@@ -20,6 +20,7 @@ model User {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   phoneNumber     String?
+  isActive        Boolean?  @default(true)
   interests       String[]  @default([])
   employeeProfile Employee?
   jobs            Job[]     @relation("EmployerJobs")
@@ -29,8 +30,8 @@ model Employee {
   id          String       @id @default(uuid())
   userId      String       @unique
   cv          String?
-  interests   String[]     @default([])
-  skills      Json?
+  jobInterests   String[]     @default([])
+  skills      String[]     @default([])
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   education   Education[]
@@ -49,7 +50,7 @@ model Job {
   requiredEducation  String?
   requiredAge        Int?
   location           Json?
-  isActive           Boolean  @default(true)
+  isActive           Boolean?  @default(true)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
   employer           User     @relation("EmployerJobs", fields: [employerId], references: [id])

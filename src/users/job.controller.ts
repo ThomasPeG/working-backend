@@ -5,11 +5,11 @@ import { UpdateJobDto } from './dto/job/update-job.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @Controller('jobs')
+@UseGuards(JwtAuthGuard)
 export class JobController {
   constructor(private readonly jobService: JobService) {}
 
   @Post()
-  @UseGuards(JwtAuthGuard)
   create(@Request() req, @Body() createJobDto: CreateJobDto) {
     // Obtener el ID del empleador del token JWT
     const employerId = req.user.userId;

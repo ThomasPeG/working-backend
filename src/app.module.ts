@@ -7,6 +7,7 @@ import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { PostsModule } from './posts/posts.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { JobTypesModule } from './jobs/job-types.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { PrismaModule } from './prisma/prisma.module';
     UsersModule,
     AuthModule,
     PostsModule,
+    JobTypesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

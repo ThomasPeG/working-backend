@@ -13,7 +13,7 @@ export class CreateEmployeeDto {
 
   @IsArray()
   @IsOptional()
-  interests?: string[];
+  jobInterests?: string[];
 
   @IsArray()
   @IsOptional()

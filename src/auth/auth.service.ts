@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { UsersService } from '../users/users.service';
@@ -15,6 +15,31 @@ export class AuthService {
     private prisma: PrismaService,
   ) {}
 
+  // Función para crear tokens JWT
+  async createToken({userId}): Promise<Response> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        employeeProfile: {
+          include: {
+            experiences: true,
+            education: true
+          }
+        }
+      }
+    });
+    
+    if (!user) {
+      throw new NotFoundException(`No se podra refrescar el token debido a que no se encontro el usuario con id: ${userId}`);
+    }
+    const payload = { email: user.email, sub: user.id };
+    return {
+      access_token: this.jwtService.sign(payload),
+      data: {user},
+      message: ``,
+    }
+  }
+
   async validateUser(email: string, password: string): Promise<any> {
 
     const user = await this.prisma.user.findUnique({ where: {email}})
@@ -28,14 +53,27 @@ export class AuthService {
 
   async login(user: User): Promise<Response> {
     const payload = { email: user.email, sub: user.id };
+    
+    // Obtener el perfil de empleado si existe
+    const userWithProfile = await this.prisma.user.findUnique({
+      where: { id: user.id },
+      include: {
+        employeeProfile: {
+          include: {
+            experiences: true,
+            education: true
+          }
+        }
+      }
+    });
+    
     const response = {
       access_token: this.jwtService.sign(payload),
-      data: {user: user},
+      data: {user: userWithProfile},
       message: `Usuario ${user.name || ''} logueado exitosamente`,
     }
     console.log("RESPONSE:", response);
     return response;
-    
   }
 
   async googleLogin(user: any): Promise<Response> {
@@ -44,7 +82,15 @@ export class AuthService {
     }
 
     let userInDb = await this.prisma.user.findUnique({
-      where: { email: user.email }
+      where: { email: user.email },
+      include: {
+        employeeProfile: {
+          include: {
+            experiences: true,
+            education: true
+          }
+        }
+      }
     });
 
     // Si no existe, crear un nuevo usuario
@@ -54,6 +100,14 @@ export class AuthService {
           email: user.email,
           name: `${user.firstName} ${user.lastName}`,
           profilePhoto: user.picture,
+        },
+        include: {
+          employeeProfile: {
+            include: {
+              experiences: true,
+              education: true
+            }
+          }
         }
       });
     }
