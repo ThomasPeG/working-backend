@@ -33,11 +33,12 @@ export class AuthService {
       throw new NotFoundException(`No se podra refrescar el token debido a que no se encontro el usuario con id: ${userId}`);
     }
     const payload = { email: user.email, sub: user.id };
-    return {
+    const response = {
       access_token: this.jwtService.sign(payload),
       data: {user},
-      message: ``,
+      message: `Token refrescado exitosamente`,
     }
+    return response;
   }
 
   async validateUser(email: string, password: string): Promise<any> {

@@ -81,6 +81,7 @@ export class UsersService {
   }
 
   async update(id: string, user: UpdateUserDto): Promise<Response> {
+    console.log("UpdateUserDto",user);
     const updatedUser = await this.prisma.user.update({
       where: { id },
       data: user,
@@ -93,6 +94,7 @@ export class UsersService {
         }
       }
     });
+    console.log("UpdateUser",updatedUser);
     const payload = { email: updatedUser.email, sub: updatedUser.id };
     return {
       access_token: this.jwtService.sign(payload),
@@ -111,5 +113,20 @@ export class UsersService {
       data: {user: deletedUser},
       message: 'Usuario eliminado exitosamente',
     };
+  }
+
+  // Añadir este método al UsersService existente
+  
+  async checkFriendship(userId1: string, userId2: string): Promise<boolean> {
+    const friendship = await this.prisma.friendship.findFirst({
+      where: {
+        OR: [
+          { requesterId: userId1, addresseeId: userId2, status: 'accepted' },
+          { requesterId: userId2, addresseeId: userId1, status: 'accepted' }
+        ]
+      }
+    });
+    
+    return !!friendship;
   }
 }

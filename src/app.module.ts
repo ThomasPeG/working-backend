@@ -8,6 +8,7 @@ import { AuthModule } from './auth/auth.module';
 import { PostsModule } from './posts/posts.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { JobTypesModule } from './jobs/job-types.module';
+import { MessagesModule } from './messages/messages.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { JobTypesModule } from './jobs/job-types.module';
     AuthModule,
     PostsModule,
     JobTypesModule,
+    MessagesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

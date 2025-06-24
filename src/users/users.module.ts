@@ -7,6 +7,8 @@ import { EmployeeService } from './employee.service';
 import { JobService } from './job.service';
 import { EmployeeController } from './employee.controller';
 import { JobController } from './job.controller';
+import { FriendshipService } from './friendship.service';
+import { FriendshipController } from './friendship.controller';
 
 @Module({
   imports: [
@@ -19,8 +21,8 @@ import { JobController } from './job.controller';
       }),
     }),
   ],
-  controllers: [UsersController, EmployeeController, JobController],
-  providers: [UsersService, EmployeeService, JobService],
-  exports: [UsersService, EmployeeService, JobService]
+  controllers: [UsersController, EmployeeController, JobController, FriendshipController],
+  providers: [UsersService, EmployeeService, JobService, FriendshipService],
+  exports: [UsersService, EmployeeService, JobService, FriendshipService]
 })
 export class UsersModule {}

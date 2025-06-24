@@ -1,5 +1,15 @@
-import { IsEmail, IsNotEmpty, IsOptional, IsString, IsDate, IsEnum, IsArray } from 'class-validator'; 
+import { IsEmail, IsNotEmpty, IsOptional, IsString, IsDate, IsEnum, IsArray, ValidateNested, IsObject, IsBoolean } from 'class-validator'; 
 import { Type } from 'class-transformer';
+
+class LocationDto {
+  @IsString()
+  @IsOptional()
+  city?: string;
+
+  @IsString()
+  @IsOptional()
+  country?: string;
+}
 
 export class CreateUserDto { 
   @IsEmail() 
@@ -26,6 +36,22 @@ export class CreateUserDto {
   @IsDate() 
   @IsOptional() 
   birthDate?: Date; 
+
+  @IsObject()
+  @ValidateNested()
+  @Type(() => LocationDto)
+  @IsOptional()
+  birthplace?: { city: string; country: string };
+
+  @IsObject()
+  @ValidateNested()
+  @Type(() => LocationDto)
+  @IsOptional()
+  residenceLocation?: { city: string; country: string }; // Nueva propiedad
+
+  @IsBoolean()
+  @IsOptional()
+  useGPS?: boolean; // Nueva propiedad
 
   @IsEnum(['employee', 'employer']) 
   @IsOptional() 

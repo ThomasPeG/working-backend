@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request, Query } from '@nestjs/common';
 import { EmployeeService } from './employee.service';
 import { CreateEmployeeDto } from './dto/employee/create-employee.dto';
 import { UpdateEmployeeDto } from './dto/employee/update-employee.dto';
@@ -23,6 +23,12 @@ export class EmployeeController {
     console.log('User from request:', req.user); // Para depuración
     const userId = req.user.userId;
     return this.employeeService.findByUserId(userId);
+  }
+  
+  @Get('recommended')
+  getRecommendedEmployees(@Request() req, @Query('limit') limit?: string) {
+    const userId = req.user.userId;
+    return this.employeeService.getRecommendedEmployees(userId, limit ? parseInt(limit) : undefined);
   }
 
   @Get(':id')
