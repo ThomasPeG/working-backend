@@ -53,7 +53,7 @@ export class CreateUserDto {
   @IsOptional()
   useGPS?: boolean; // Nueva propiedad
 
-  @IsEnum(['employee', 'employer']) 
+  @IsEnum(['employee', 'employer', 'not_sure'])
   @IsOptional() 
   userType?: string = 'employee'; 
 

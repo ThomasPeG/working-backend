@@ -15,9 +15,13 @@ export class CreateEmployeeDto {
   @IsOptional()
   jobInterests?: string[];
 
+  @IsString()
+  @IsOptional()
+  skills?: string;
+
   @IsArray()
   @IsOptional()
-  skills?: string[];
+  spokenLanguages?: string[];
 
   @IsArray()
   @IsOptional()

@@ -17,7 +17,8 @@ export class EmployeeService {
   ) {}
 
   async create(userId: string, employeeData: CreateEmployeeDto): Promise<Response> {
-    console.log(employeeData);
+    console.log('IDDDDDDDDDD',userId);
+    console.log('employeeData',employeeData);
     // Verificar que el usuario existe
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -31,8 +32,9 @@ export class EmployeeService {
     const employee = await this.prisma.employee.create({
       data: {
         cv: employeeData.cv,
-        skills: employeeData.skills || [],
-        jobInterests: employeeData.jobInterests || [],
+        skills: employeeData.skills,
+        jobInterests: employeeData.jobInterests,
+        spokenLanguages: employeeData.spokenLanguages,
         user: {
           connect: { id: userId }
         }
@@ -41,14 +43,9 @@ export class EmployeeService {
     
     // Devolver el usuario actualizado con su perfil de empleado
     const updatedUser = await this.prisma.user.findUnique({
-      where: { id: employee.id },
+      where: { id: employee.userId },
       include: {
-        employeeProfile: {
-          include: {
-            experiences: true,
-            education: true
-          }
-        }
+        employeeProfile: true
       }
     });
     
@@ -149,6 +146,7 @@ export class EmployeeService {
   }
 
   async addEducation(employeeId: string, educationData: CreateEducationDto): Promise<Response> {
+    console.log('employeeId',employeeId)
     // Verificar que el empleado existe
     const employee = await this.prisma.employee.findUnique({
       where: { id: employeeId }
@@ -310,6 +308,7 @@ export class EmployeeService {
       name: { not: null },
       birthDate: { not: null }
     };
+    console.log('Base where filter:', baseWhere);
 
     let recommendedUsers: any[] = [];
 
@@ -410,7 +409,7 @@ export class EmployeeService {
         });
       }
 
-      recommendedUsers = [...similarUsers, ...diverseUsers];
+     recommendedUsers = [...similarUsers, ...diverseUsers];      
     }
     // CASO 3: Usuario sin perfil de empleado o sin intereses laborales o empleador sin trabajos
     else {
@@ -433,16 +432,15 @@ export class EmployeeService {
       id: user.id,
       name: user.name,
       profilePhoto: user.profilePhoto,
-      userType: user.userType,
-      birthDate: user.birthDate,
+      birthplace: user.birthplace,
+      gender: user.gender,
       employeeProfile: user.employeeProfile ? {
         id: user.employeeProfile?.id,
         jobInterests: user.employeeProfile?.jobInterests,
         skills: user.employeeProfile?.skills,
-        experiences: user.employeeProfile?.experiences,
-        education: user.employeeProfile?.education
+        spokenLanguages: user.employeeProfile?.spokenLanguages,
       } : null
-    }));
+    })).filter(user => user.id !== userId)
 
     return {
       access_token: null,

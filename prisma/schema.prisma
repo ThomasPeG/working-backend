@@ -25,7 +25,7 @@ model User {
   phoneNumber     String?
   isActive        Boolean?     @default(true)
   interests       String[]     @default([])
-  employeeProfile Employee?
+  employeeProfile Employee?  @relation("employeeProfile")
   jobs            Job[]        @relation("EmployerJobs")
   
   // Relaciones de amistad
@@ -36,50 +36,68 @@ model User {
 model Employee {
   id          String       @id @default(uuid())
   userId      String       @unique
+
   cv          String?
   jobInterests   String[]     @default([])
-  skills      String[]     @default([])
+  skills      String?
+  spokenLanguages String[]     @default([])
+
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
+
   education   Education[]
-  user        User         @relation(fields: [userId], references: [id])
   experiences Experience[]
+
+  user        User         @relation("employeeProfile", fields: [userId], references: [id])
 }
+
 
 model Job {
   id                 String   @id @default(uuid())
   employerId         String
+
   title              String
   description        String
+  location           Json?
   schedule           String?
+  timeCommitment     String?
   salary             Float?
+  languages          String[]  @default([])
   requiredExperience Int?
   requiredEducation  String?
   requiredAge        Int?
-  location           Json?
+  contractType       String?
+  paymentDetails     String?
+
+
   isActive           Boolean?  @default(true)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
+  
   employer           User     @relation("EmployerJobs", fields: [employerId], references: [id])
 }
 
 model Experience {
   id               String    @id @default(uuid())
   employeeId       String
+
   position         String
-  company          String
+  company          String?
   description      String?
   startDate        DateTime
   endDate          DateTime?
   currentlyWorking Boolean   @default(false)
+
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
+
   employee         Employee  @relation(fields: [employeeId], references: [id])
 }
 
 model Education {
   id                String    @id @default(uuid())
   employeeId        String
+
   educationType     String?
   institution       String?
   fieldOfStudy      String?
@@ -87,8 +105,10 @@ model Education {
   startDate         DateTime
   endDate           DateTime?
   currentlyStudying Boolean?  @default(false)
+
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+  
   employee          Employee  @relation(fields: [employeeId], references: [id])
 }
 

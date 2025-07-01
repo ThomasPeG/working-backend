@@ -98,7 +98,6 @@ export class FriendshipService {
 
   // Obtener todas las amistades de un usuario
   async getFriendships(userId: string): Promise<Response> {
-      console.log("UserId",userId);
     const friendships = await this.prisma.friendship.findMany({
       where: {
         OR: [

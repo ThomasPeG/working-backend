@@ -28,6 +28,7 @@ export class EmployeeController {
   @Get('recommended')
   getRecommendedEmployees(@Request() req, @Query('limit') limit?: string) {
     const userId = req.user.userId;
+    console.log('User ID in controller:', userId);
     return this.employeeService.getRecommendedEmployees(userId, limit ? parseInt(limit) : undefined);
   }
 

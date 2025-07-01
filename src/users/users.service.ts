@@ -23,7 +23,6 @@ export class UsersService {
       message: `Usuario ${user.name || ''} creado exitosamente`,
     };
   }
-
   async findAll(): Promise<Response> {
     const users = await this.prisma.user.findMany();
     return {
@@ -84,15 +83,7 @@ export class UsersService {
     console.log("UpdateUserDto",user);
     const updatedUser = await this.prisma.user.update({
       where: { id },
-      data: user,
-      include: {
-        employeeProfile: {
-          include: {
-            experiences: true,
-            education: true
-          }
-        }
-      }
+      data: user
     });
     console.log("UpdateUser",updatedUser);
     const payload = { email: updatedUser.email, sub: updatedUser.id };

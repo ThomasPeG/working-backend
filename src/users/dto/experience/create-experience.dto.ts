@@ -6,8 +6,8 @@ export class CreateExperienceDto {
   position: string;
 
   @IsString()
-  @IsNotEmpty({ message: 'Company name is required' })
-  company: string;
+  @IsOptional()
+  company?: string;
 
   @IsString()
   @IsOptional()
