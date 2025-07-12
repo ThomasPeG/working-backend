@@ -27,7 +27,7 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
   const port = configService.get('PORT') || 10000; // Default to Render's expected port
 
-  await app.listen(port, 'localhost');
-  console.log(`Application is running on: http://localhost:${port}`);
+  await app.listen(port, '0.0.0.0');
+  console.log(`Application is running on: http://0.0.0.0:${port}`);
 }
 bootstrap();
