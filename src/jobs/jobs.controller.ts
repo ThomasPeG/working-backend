@@ -18,8 +18,13 @@ export class JobsController {
   }
 
   @Get()
-  findAll(@Query() filters: any) {
-    return this.jobsService.findAll(filters);
+  findAll(
+    @Query('limit') limit: string,
+    @Query('page') page: string
+  ) {
+    const limitNum = limit ? parseInt(limit) : 10;
+    const pageNum = page ? parseInt(page) : 1;
+    return this.jobsService.findAll(limitNum, pageNum);
   }
 
   @Get('my-jobs')

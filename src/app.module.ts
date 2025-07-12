@@ -10,6 +10,8 @@ import { PrismaModule } from './prisma/prisma.module';
 import { JobTypesModule } from './jobs/job-types.module';
 import { JobsModule } from './jobs/jobs.module';
 import { MessagesModule } from './messages/messages.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { EventsModule } from './events/events.module';
 
 @Module({
   imports: [
@@ -37,6 +39,8 @@ import { MessagesModule } from './messages/messages.module';
     JobTypesModule,
     JobsModule,
     MessagesModule,
+    NotificationsModule,
+    EventsModule, // Añadimos el nuevo módulo de eventos
   ],
   controllers: [AppController],
   providers: [AppService],

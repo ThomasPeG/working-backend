@@ -6,6 +6,8 @@ import { Conversation, ConversationDocument } from './schemas/conversation.schem
 import { CreateMessageDto } from './dto/create-message.dto';
 import { UsersService } from '../users/users.service';
 import { Response } from '../interfaces/response.interface';
+import { EventsGateway } from '../events/events.gateway';
+import { NotificationsService } from 'src/notifications/notifications.service';
 
 @Injectable()
 export class MessagesService {
@@ -13,14 +15,23 @@ export class MessagesService {
     @InjectModel(Message.name) private messageModel: Model<MessageDocument>,
     @InjectModel(Conversation.name) private conversationModel: Model<ConversationDocument>,
     private usersService: UsersService,
+    private eventsGateway: EventsGateway,
+    private notificationsService: NotificationsService,
   ) {}
 
-  // Enviar un mensaje
+  // 1. Enviar un mensaje - Solo guarda y actualiza lastMessage
   async sendMessage(senderId: string, createMessageDto: CreateMessageDto): Promise<Response> {
+    console.log('Enviando mensaje desde el servicio...', createMessageDto, '--', senderId);
+    
     // Verificar que el receptor exista
-    await this.usersService.findOne(createMessageDto.receiverId);
+    const receiverResponse = await this.usersService.findOne(createMessageDto.receiverId);
+    const receiver = receiverResponse.data.user;
+    
+    // Verificar que el remitente exista
+    const senderResponse = await this.usersService.findOne(senderId);
+    const sender = senderResponse.data.user;
 
-    // Verificar que sean amigos (usando el servicio de usuarios)
+    // Verificar que sean amigos
     const areFriends = await this.usersService.checkFriendship(senderId, createMessageDto.receiverId);
 
     if (!areFriends) {
@@ -33,24 +44,33 @@ export class MessagesService {
       receiverId: createMessageDto.receiverId,
       content: createMessageDto.content,
       attachments: createMessageDto.attachments || [],
+      read: false
     });
 
     const savedMessage = await newMessage.save();
-
-    // Actualizar o crear la conversación
+  
     const participants = [senderId, createMessageDto.receiverId].sort();
-    
+  
+    // Actualizar o crear conversación SIN agregar a array messages
     await this.conversationModel.findOneAndUpdate(
       { participants: { $all: participants } },
       {
-        participants,
-        lastMessage: createMessageDto.content,
-        lastMessageTime: new Date(),
+        $set: { 
+          lastMessage: [savedMessage._id],
+          updatedAt: new Date()
+        },
         $inc: { [`unreadCount.${createMessageDto.receiverId}`]: 1 }
       },
-      { upsert: true, new: true }
+      { 
+        upsert: true, 
+        new: true,
+        setDefaultsOnInsert: true,
+      }
     );
-
+  
+    // Enviar mensaje al receptor
+    this.eventsGateway.sendNewMessage(createMessageDto.receiverId, savedMessage);
+  
     return {
       access_token: null,
       data: { message: savedMessage },
@@ -58,76 +78,92 @@ export class MessagesService {
     };
   }
 
-  // Obtener conversación con un usuario
-  async getConversation(userId: string, friendId: string): Promise<Response> {
-    // Verificar que el amigo exista
-    await this.usersService.findOne(friendId);
+  // 2. Marcar un mensaje como leído
+  async markAsRead(userId: string, messageId: string): Promise<Response> {
+    try {
+      // Buscar el mensaje
+      const message = await this.messageModel.findById(messageId).exec();
+      if (!message) {
+        throw new NotFoundException('Mensaje no encontrado');
+      }
 
-    // Verificar que sean amigos
-    const areFriends = await this.usersService.checkFriendship(userId, friendId);
+      // Verificar que el usuario sea el receptor del mensaje
+      if (message.receiverId !== userId) {
+        throw new ForbiddenException('No puedes marcar como leído un mensaje que no es tuyo');
+      }
 
-    if (!areFriends) {
-      throw new ForbiddenException('No puedes ver mensajes de usuarios que no son tus amigos');
+      // Marcar el mensaje como leído
+      const updatedMessage = await this.messageModel.findByIdAndUpdate(
+        messageId,
+        { read: true },
+        { new: true }
+      ).exec();
+
+      // Buscar la conversación y actualizar unreadCount
+      const participants = [message.senderId, message.receiverId].sort();
+      await this.conversationModel.findOneAndUpdate(
+        { participants: { $all: participants } },
+        { [`unreadCount.${userId}`]: 0 },
+        { new: true }
+      ).exec();
+
+      // Enviar solo el mensaje actualizado al remitente
+      this.eventsGateway.sendMessageRead(
+        message.senderId,
+        {
+          _id: updatedMessage!._id,
+          senderId: updatedMessage!.senderId,
+          receiverId: updatedMessage!.receiverId,
+          content: updatedMessage!.content,
+          attachments: updatedMessage!.attachments,
+          read: updatedMessage!.read,
+          createdAt: updatedMessage!.createdAt,
+          updatedAt: updatedMessage!.updatedAt
+        }
+      );
+
+      return {
+        access_token: null,
+        data: { message: updatedMessage },
+        message: 'Mensaje marcado como leído exitosamente'
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException || error instanceof ForbiddenException) {
+        throw error;
+      }
+      throw new Error('Error al marcar el mensaje como leído');
     }
-
-    // Obtener los mensajes entre ambos usuarios
-    const messages = await this.messageModel.find({
-      $or: [
-        { senderId: userId, receiverId: friendId },
-        { senderId: friendId, receiverId: userId }
-      ]
-    }).sort({ createdAt: 1 }).exec();
-
-    // Marcar como leídos los mensajes recibidos
-    await this.messageModel.updateMany(
-      { senderId: friendId, receiverId: userId, read: false },
-      { read: true }
-    ).exec();
-
-    // Resetear el contador de no leídos en la conversación
-    const participants = [userId, friendId].sort();
-    await this.conversationModel.findOneAndUpdate(
-      { participants: { $all: participants } },
-      { [`unreadCount.${userId}`]: 0 }
-    ).exec();
-
-    return {
-      access_token: null,
-      data: { messages },
-      message: 'Conversación obtenida exitosamente'
-    };
   }
 
-  // Obtener todas las conversaciones del usuario
+  // 3. Obtener conversaciones con lastMessage data y unreadCount filtrado
   async getConversations(userId: string): Promise<Response> {
-    // Buscar todas las conversaciones donde el usuario es participante
-    const conversations = await this.conversationModel.find({
-      participants: userId
-    }).sort({ lastMessageTime: -1 }).exec();
-
-    // Obtener información de los usuarios para cada conversación
-    const conversationsWithDetails = await Promise.all(conversations.map(async (conv) => {
-      const friendId = conv.participants.find(id => id !== userId);
-      if (!friendId) {
-        throw new NotFoundException('Friend ID not found in conversation');
-      }
-      const friendResponse = await this.usersService.findOne(friendId);
-      const friend = friendResponse.data.user;  // Acceder al usuario dentro de data
-      
-      return {  
-        conversationId: conv._id,
-        friend: {
-          id: friend.id,
-          name: friend.name,
-          email: friend.email,
-          profilePhoto: friend.profilePhoto
-        },
-        lastMessage: conv.lastMessage,
-        lastMessageTime: conv.lastMessageTime,
-        unreadCount: conv.unreadCount[userId] || 0
-      };
-    }));
-
+    const conversations = await this.conversationModel
+      .find({ participants: userId })
+      .populate('lastMessage')
+      .sort({ updatedAt: -1 }) // Más recientes primero
+      .exec();
+  
+    const conversationsWithDetails = await Promise.all(
+      conversations.map(async (conv) => {
+        const friendId = conv.participants.find(id => id !== userId);
+        const friendResponse = await this.usersService.findOne(friendId!);
+        const friend = friendResponse.data.user;
+        
+        return {
+          conversationId: conv._id,
+          participants: conv.participants,
+          friend: {
+            id: friend.id,
+            name: friend.name,
+            email: friend.email,
+            profilePhoto: friend.profilePhoto
+          },
+          lastMessage: conv.lastMessage[0] || null,
+          unreadCount: conv.unreadCount[userId] || 0,
+        };
+      })
+    );
+  
     return {
       access_token: null,
       data: { conversations: conversationsWithDetails },
@@ -135,17 +171,111 @@ export class MessagesService {
     };
   }
 
-  // Obtener cantidad de mensajes no leídos
-  async getUnreadCount(userId: string): Promise<Response> {
-    const count = await this.messageModel.countDocuments({
+  // 4. Obtener mensajes de una conversación
+  // Método optimizado para obtener mensajes con paginación
+  async getMessages(userId: string, friendId: string, page: number = 1, limit: number = 50): Promise<Response> {
+    // Verificar amistad
+    const areFriends = await this.usersService.checkFriendship(userId, friendId);
+    if (!areFriends) {
+      throw new ForbiddenException('No puedes ver mensajes de usuarios que no son tus amigos');
+    }
+  
+    // Consulta directa con paginación
+    const messages = await this.messageModel
+      .find({
+        $or: [
+          { senderId: userId, receiverId: friendId },
+          { senderId: friendId, receiverId: userId }
+        ]
+      })
+      .sort({ createdAt: -1 }) // Más recientes primero
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .exec();
+  
+    // Contar total de mensajes
+    const totalMessages = await this.messageModel.countDocuments({
+      $or: [
+        { senderId: userId, receiverId: friendId },
+        { senderId: friendId, receiverId: userId }
+      ]
+    });
+  
+    // Marcar mensajes no leídos como leídos
+    await this.markUnreadMessagesAsRead(userId, friendId);
+  
+    const friendResponse = await this.usersService.findOne(friendId);
+    const friend = friendResponse.data.user;
+  
+    return {
+      access_token: null,
+      data: {
+        messages: messages.reverse(), // Invertir para mostrar cronológicamente
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(totalMessages / limit),
+          totalMessages,
+          hasNextPage: page < Math.ceil(totalMessages / limit),
+          hasPrevPage: page > 1
+        },
+        friend: {
+          id: friend.id,
+          name: friend.name,
+          email: friend.email,
+          profilePhoto: friend.profilePhoto
+        }
+      },
+      message: 'Mensajes obtenidos exitosamente'
+    };
+  }
+
+  // 5. Función separada para marcar mensajes no leídos como leídos
+  private async markUnreadMessagesAsRead(userId: string, friendId: string): Promise<void> {
+    // Buscar mensajes no leídos que el usuario recibió (no los que envió)
+    const unreadMessages = await this.messageModel.find({
+      senderId: friendId,
       receiverId: userId,
       read: false
     }).exec();
-
-    return {
-      access_token: null,
-      data: { unreadCount: count },
-      message: 'Cantidad de mensajes no leídos obtenida exitosamente'
-    };
+  
+    if (unreadMessages.length > 0) {
+      // Marcar todos como leídos
+      await this.messageModel.updateMany(
+        {
+          senderId: friendId,
+          receiverId: userId,
+          read: false
+        },
+        { read: true }
+      ).exec();
+  
+      // Obtener los mensajes actualizados
+      const readMessages = await this.messageModel.find({
+        _id: { $in: unreadMessages.map(msg => msg._id) }
+      }).exec();
+  
+      // Buscar la conversación dinámicamente y actualizar unreadCount
+      const participants = [userId, friendId].sort();
+      await this.conversationModel.findOneAndUpdate(
+        { participants: { $all: participants } },
+        { [`unreadCount.${userId}`]: 0 },
+        { new: true }
+      ).exec();
+  
+      // Enviar solo los mensajes modificados al remitente
+      this.eventsGateway.sendMessagesRead(
+        friendId,
+        readMessages.map(msg => ({
+          _id: msg._id,
+          senderId: msg.senderId,
+          receiverId: msg.receiverId,
+          content: msg.content,
+          attachments: msg.attachments,
+          read: msg.read,
+          createdAt: msg.createdAt,
+          updatedAt: msg.updatedAt
+        }))
+      );
+    }
   }
 }

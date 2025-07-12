@@ -19,3 +19,12 @@ export interface Response {
               // {experience: Experience[]};
   message: string;
 }
+
+// Nueva interfaz para respuestas de Socket
+export interface SocketResponse {
+  event: string;           // Tipo de evento (notification, message, jobUpdate, etc.)
+  data: any;              // Datos del evento
+  message: string;        // Mensaje descriptivo
+  timestamp: Date;        // Timestamp del evento
+  success: boolean;       // Indica si la operación fue exitosa
+}

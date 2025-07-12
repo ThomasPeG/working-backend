@@ -7,6 +7,7 @@ import { JobComment, JobCommentSchema } from './schemas/job-comment.schema';
 import { JobShare, JobShareSchema } from './schemas/job-share.schema';
 import { JobLike, JobLikeSchema } from './schemas/job-like.schema';
 import { UsersModule } from '../users/users.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { UsersModule } from '../users/users.module';
       { name: JobLike.name, schema: JobLikeSchema },
     ]),
     UsersModule,
+    NotificationsModule,
   ],
   controllers: [JobsController],
   providers: [JobsService],

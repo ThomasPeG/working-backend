@@ -19,6 +19,15 @@ export class Message {
 
   @Prop({ type: [String], default: [] })
   attachments: string[];
+
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export const MessageSchema = SchemaFactory.createForClass(Message);
+
+// Índices compuestos para optimizar consultas
+MessageSchema.index({ senderId: 1, receiverId: 1, createdAt: -1 });
+MessageSchema.index({ receiverId: 1, senderId: 1, createdAt: -1 });
+MessageSchema.index({ senderId: 1, receiverId: 1, read: 1 });
+MessageSchema.index({ receiverId: 1, read: 1 }); // Para mensajes no leídos

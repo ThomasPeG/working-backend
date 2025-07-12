@@ -11,6 +11,7 @@ import { CreateJobShareDto } from './dto/create-job-share.dto';
 import { UsersService } from '../users/users.service';
 import { Response } from 'src/interfaces/response.interface';
 import { JobLike, JobLikeDocument } from './schemas/job-like.schema';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class JobsService {
@@ -20,11 +21,11 @@ export class JobsService {
     @InjectModel(JobShare.name) private jobShareModel: Model<JobShareDocument>,
     @InjectModel(JobLike.name) private jobLikeModel: Model<JobLikeDocument>,
     private usersService: UsersService,
+    private notificationsService: NotificationsService,
   ) {}
 
   async create(userId: string, createJobDto: CreateJobDto): Promise<Response> {
-    console.log(createJobDto);
-    console.log(userId);
+
     // Verificar que el usuario existe
     const user = await this.usersService.findOne(userId);
     
@@ -37,32 +38,69 @@ export class JobsService {
       ...createJobDto,
     });
     const JobSave = await newJob.save();
+    const jovId = JobSave._id
+    // Crear una notificación para el usuario
+    const notificationSaved = await this.notificationsService.create({
+      userId: userId,
+      type: 'job_created',
+      message: `Has creado un nuevo trabajo: ${createJobDto.title}`,
+      data: { jobId: JobSave._id },
+      relatedId: jovId as string,
+    });
+    console.log("notificationSaved",notificationSaved);
     return {
       access_token: null,
       data: {job: JobSave},
       message: `Job created successfully`,
-
     };
   }
 
-  async findAll(filters?: any): Promise<Response> {
-    // Construir el objeto de condiciones para MongoDB
+  async findAll(limit: number = 10, page: number = 1): Promise<Response> {
+    // Condición básica: solo trabajos activos
     const where: any = { isActive: true };
     
-    if (filters) {
-      if (filters.title) {
-        where.title = { $regex: filters.title, $options: 'i' };
+    // Calcular el número de documentos a saltar
+    const skip = (page - 1) * limit;
+    
+    // Obtener el total de documentos para calcular el total de páginas
+    const total = await this.jobModel.countDocuments(where).exec();
+    
+    // Obtener los trabajos con paginación
+    const jobs = await this.jobModel.find(where)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .exec();
+    
+    // Obtener la información de los usuarios que crearon los trabajos
+    const jobsWithUserInfo = await Promise.all(jobs.map(async (job) => {
+      // Obtener la información del usuario
+      const userResponse = await this.usersService.findOne(job.userId);
+      const user = userResponse.data.user;
+      
+      // Eliminar información sensible del usuario
+      if (user) {
+        delete user.password;
       }
       
-      if (filters.requiredExperience) {
-        where.requiredExperience = filters.requiredExperience;
-      }
-    }
-
-    const jobs = await this.jobModel.find(where).sort({ createdAt: -1 }).exec();
+      // Devolver el trabajo con la información del usuario
+      return {
+        ...job.toObject(),
+        user: user
+      };
+    }));
+    
     return {
       access_token: null,
-      data: { jobs },
+      data: { 
+        jobs: jobsWithUserInfo,
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit)
+        }
+      },
       message: 'Jobs retrieved successfully',
     };
   }

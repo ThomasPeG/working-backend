@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, IsOptional, IsArray, IsNumber, IsBoolean, IsObject } from 'class-validator';
+import { IsNotEmpty, IsString, IsOptional, IsArray, IsNumber, IsBoolean, IsObject, IsUrl } from 'class-validator';
 
 export class CreateJobDto {
   @IsString()
@@ -52,6 +52,10 @@ export class CreateJobDto {
   @IsString()
   @IsOptional()
   contractType?: string;
+  
+  @IsArray()
+  @IsOptional()
+  images?: string[];
 
   @IsBoolean()
   @IsOptional()

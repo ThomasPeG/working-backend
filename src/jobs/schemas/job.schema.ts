@@ -35,10 +35,10 @@ export class Job {
   @Prop({ type: [String], default: [] })
   requiredLanguages: string[];
 
-  @Prop({ type: String, default: false })
+  @Prop({ type: Boolean, default: false })
   requiredExperience: boolean;
 
-  @Prop({ type: String, default: false })
+  @Prop({ type: Boolean, default: false })
   requiredEducation: boolean;
 
   @Prop({ type: Number, default: null })
@@ -46,6 +46,9 @@ export class Job {
 
   @Prop({ type: String, default: null })
   contractType: string;
+  
+  @Prop({ type: [String], default: [] })
+  images: string[];
 
   @Prop({ default: true })
   isActive: boolean;

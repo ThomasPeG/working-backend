@@ -7,6 +7,8 @@ import { EmployeeService } from './employee.service';
 import { EmployeeController } from './employee.controller';
 import { FriendshipService } from './friendship.service';
 import { FriendshipController } from './friendship.controller';
+import { EventsModule } from '../events/events.module';
+import { NotificationsModule } from '../notifications/notifications.module'; // Importar NotificationsModule
 
 @Module({
   imports: [
@@ -18,9 +20,11 @@ import { FriendshipController } from './friendship.controller';
         signOptions: { expiresIn: configService.get('JWT_EXPIRATION') },
       }),
     }),
+    EventsModule,
+    NotificationsModule, // Añadir NotificationsModule a los imports
   ],
   controllers: [UsersController, EmployeeController, FriendshipController],
-  providers: [UsersService, EmployeeService , FriendshipService],
+  providers: [UsersService, EmployeeService, FriendshipService],
   exports: [UsersService, EmployeeService, FriendshipService]
 })
 export class UsersModule {}

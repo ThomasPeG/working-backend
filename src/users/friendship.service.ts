@@ -1,3 +1,4 @@
+import { NotificationsService } from './../notifications/notifications.service';
 import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateFriendshipDto } from './dto/friendship/create-friendship.dto';
@@ -6,7 +7,9 @@ import { Response } from '../interfaces/response.interface';
 
 @Injectable()
 export class FriendshipService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService,
+    private notificationsService: NotificationsService
+  ) {}
 
   // Enviar solicitud de amistad
   async sendFriendRequest(userId: string, createFriendshipDto: CreateFriendshipDto): Promise<Response> {
@@ -33,6 +36,13 @@ export class FriendshipService {
         ]
       }
     });
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true
+      }
+    });
 
     if (existingFriendship) {
       throw new ConflictException('Ya existe una solicitud de amistad entre estos usuarios');
@@ -51,6 +61,25 @@ export class FriendshipService {
       }
     });
 
+    this.notificationsService.create(
+      {
+        userId: createFriendshipDto.addresseeId,
+        type: "friendship_request",
+        message: `El usuario ${user!.name} te ha enviado una solicitud de amistad`,
+        data: {
+          friendshipId: friendship.id,
+          requester: {
+            id: friendship.requester.id,
+            name: friendship.requester.name,
+            email: friendship.requester.email,
+            profilePhoto: friendship.requester.profilePhoto
+          }
+        },
+        relatedId: friendship.id,
+        senderUserId: userId
+      }
+    );
+
     return {
       access_token: null,
       data: { friendship },
@@ -62,7 +91,11 @@ export class FriendshipService {
   async respondToFriendRequest(userId: string, friendshipId: string, updateFriendshipDto: UpdateFriendshipDto): Promise<Response> {
     // Buscar la solicitud de amistad
     const friendship = await this.prisma.friendship.findUnique({
-      where: { id: friendshipId }
+      where: { id: friendshipId },
+      include: {
+        requester: true,
+        addressee: true
+      }
     });
 
     if (!friendship) {
@@ -79,20 +112,56 @@ export class FriendshipService {
       throw new ConflictException('Esta solicitud ya ha sido respondida');
     }
 
-    // Actualizar el estado de la solicitud
-    const updatedFriendship = await this.prisma.friendship.update({
-      where: { id: friendshipId },
-      data: { status: updateFriendshipDto.status },
-      include: {
-        requester: true,
-        addressee: true
-      }
-    });
+    let result : any;
+    let message :any;
+
+    if (updateFriendshipDto.status === 'rejected') {
+      // Si la solicitud es rechazada, eliminar el registro
+      await this.prisma.friendship.delete({
+        where: { id: friendshipId }
+      });
+
+      result = { friendship: { ...friendship, status: 'rejected' } };
+      message = 'Solicitud de amistad rechazada exitosamente';
+
+    } else {
+      // Si la solicitud es aceptada, actualizar el estado
+      const updatedFriendship = await this.prisma.friendship.update({
+        where: { id: friendshipId },
+        data: { status: updateFriendshipDto.status },
+        include: {
+          requester: true,
+          addressee: true
+        }
+      });
+
+      result = { friendship: updatedFriendship };
+      message = 'Solicitud de amistad aceptada exitosamente';
+
+      // Enviar notificación al solicitante de que su solicitud fue aceptada
+      this.notificationsService.create({
+        userId: friendship.requesterId,
+        type: "friendship_request_response",
+        message: `${friendship.addressee.name} ha aceptado tu solicitud de amistad`,
+        data: {
+          friendshipId: friendship.id,
+          status: 'accepted',
+          addressee: {
+            id: friendship.addressee.id,
+            name: friendship.addressee.name,
+            email: friendship.addressee.email,
+            profilePhoto: friendship.addressee.profilePhoto
+          }
+        },
+        relatedId: friendship.id,
+        senderUserId: userId
+      });
+    }
 
     return {
       access_token: null,
-      data: { friendship: updatedFriendship },
-      message: `Solicitud de amistad ${updateFriendshipDto.status === 'accepted' ? 'aceptada' : 'rechazada'} exitosamente`
+      data: result,
+      message
     };
   }
 
