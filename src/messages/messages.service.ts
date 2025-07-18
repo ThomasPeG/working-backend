@@ -3,7 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Message, MessageDocument } from './schemas/message.schema';
 import { Conversation, ConversationDocument } from './schemas/conversation.schema';
-import { CreateMessageDto } from './dto/create-message.dto';
+import { CreateMessageDto, MessageType } from './dto/create-message.dto';
 import { UsersService } from '../users/users.service';
 import { Response } from '../interfaces/response.interface';
 import { EventsGateway } from '../events/events.gateway';
@@ -21,7 +21,6 @@ export class MessagesService {
 
   // 1. Enviar un mensaje - Solo guarda y actualiza lastMessage
   async sendMessage(senderId: string, createMessageDto: CreateMessageDto): Promise<Response> {
-    console.log('Enviando mensaje desde el servicio...', createMessageDto, '--', senderId);
     
     // Verificar que el receptor exista
     const receiverResponse = await this.usersService.findOne(createMessageDto.receiverId);
@@ -38,12 +37,16 @@ export class MessagesService {
       throw new ForbiddenException('No puedes enviar mensajes a usuarios que no son tus amigos');
     }
 
-    // Crear el mensaje
+    // Crear el mensaje con los nuevos campos multimedia
     const newMessage = new this.messageModel({
       senderId,
       receiverId: createMessageDto.receiverId,
       content: createMessageDto.content,
       attachments: createMessageDto.attachments || [],
+      type: createMessageDto.type || 'text', // Default a texto
+      mediaUrl: createMessageDto.mediaUrl,
+      fileName: createMessageDto.fileName,
+      linkPreview: createMessageDto.linkPreview,
       read: false
     });
 
@@ -51,22 +54,36 @@ export class MessagesService {
   
     const participants = [senderId, createMessageDto.receiverId].sort();
   
-    // Actualizar o crear conversación SIN agregar a array messages
-    await this.conversationModel.findOneAndUpdate(
-      { participants: { $all: participants } },
-      {
-        $set: { 
-          lastMessage: [savedMessage._id],
-          updatedAt: new Date()
+    // Validar si la conversación existe y usar Create o Update según corresponda
+    const existingConversation = await this.conversationModel.findOne({
+      participants: { $all: participants }
+    }).exec();
+
+    if (existingConversation) {
+      // La conversación ya existe - ACTUALIZAR
+      await this.conversationModel.findByIdAndUpdate(
+        existingConversation._id,
+        {
+          $set: { 
+            lastMessage: [savedMessage._id],
+            updatedAt: new Date()
+          },
+          $inc: { [`unreadCount.${createMessageDto.receiverId}`]: 1 }
         },
-        $inc: { [`unreadCount.${createMessageDto.receiverId}`]: 1 }
-      },
-      { 
-        upsert: true, 
-        new: true,
-        setDefaultsOnInsert: true,
-      }
-    );
+        { new: true }
+      ).exec();
+    } else {
+      // La conversación no existe - CREAR
+      const newConversation = new this.conversationModel({
+        participants,
+        lastMessage: [savedMessage._id],
+        unreadCount: {
+          [createMessageDto.receiverId]: 1,
+          [senderId]: 0
+        }
+      });
+      await newConversation.save();
+    }
   
     // Enviar mensaje al receptor
     this.eventsGateway.sendNewMessage(createMessageDto.receiverId, savedMessage);
@@ -116,6 +133,10 @@ export class MessagesService {
           receiverId: updatedMessage!.receiverId,
           content: updatedMessage!.content,
           attachments: updatedMessage!.attachments,
+          type: updatedMessage!.type, // NUEVO
+          mediaUrl: updatedMessage!.mediaUrl, // NUEVO
+          fileName: updatedMessage!.fileName, // NUEVO
+          linkPreview: updatedMessage!.linkPreview, // NUEVO
           read: updatedMessage!.read,
           createdAt: updatedMessage!.createdAt,
           updatedAt: updatedMessage!.updatedAt

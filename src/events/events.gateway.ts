@@ -42,15 +42,10 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
 
   @SubscribeMessage('identity')
   handleIdentity(client: Socket, payload: { userId: string }) {
-    console.log(`Identity received: ${payload.userId} for socket: ${client.id}`);
-    console.log('Type of userId:', typeof payload.userId);
-    console.log('Current userSocketMap before:', Array.from(this.userSocketMap.entries()));
     
     // Guardar la relación entre userId y socketId
     this.userSocketMap.set(payload.userId, client.id);
     this.socketUserMap.set(client.id, payload.userId);
-    
-    console.log('Current userSocketMap after:', Array.from(this.userSocketMap.entries()));
     
     const response: SocketResponse = {
       event: 'identity',
@@ -283,7 +278,6 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
 
   // Enviar nuevo mensaje completo
   sendNewMessage(userId: string, messageData: any): boolean {
-    console.log('Mensaje enviado a:', userId,'Data:', messageData);
     const socketId = this.userSocketMap.get(userId);
     if (socketId) {
       this.server.to(socketId).emit('newMessage', {

@@ -23,11 +23,16 @@ async function bootstrap() {
   // Configurar CORS
   app.enableCors();
   
-  // Obtener el puerto de las variables de entorno
+  // Obtener el puerto y entorno de las variables de entorno
   const configService = app.get(ConfigService);
   const port = configService.get('PORT') || 10000; // Default to Render's expected port
-
-  await app.listen(port, '0.0.0.0');
-  console.log(`Application is running on: http://0.0.0.0:${port}`);
+  const nodeEnv = configService.get('NODE_ENV') || 'development';
+  
+  // Configurar host según el entorno
+  const host = nodeEnv === 'production' ? '0.0.0.0' : 'localhost';
+  
+  await app.listen(port, 'localhost');
+  console.log(`Application is running on: http://${host}:${port}`);
+  console.log(`Environment: ${nodeEnv}`);
 }
 bootstrap();

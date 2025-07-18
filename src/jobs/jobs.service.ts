@@ -70,6 +70,7 @@ export class JobsService {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
+      .allowDiskUse(true)  // Add this line to enable external sorting
       .exec();
     
     // Obtener la información de los usuarios que crearon los trabajos
@@ -124,7 +125,10 @@ export class JobsService {
 
   async findByUserId(userId: string): Promise<Response> {
     console.log(userId);
-    const jobs = await this.jobModel.find({ userId }).sort({ createdAt: -1 }).exec();
+    const jobs = await this.jobModel.find({ userId })
+      .sort({ createdAt: -1 })
+      .allowDiskUse(true)  // Add this line
+      .exec();
     return {
       access_token: null,
       data: { jobs },

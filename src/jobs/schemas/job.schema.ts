@@ -50,7 +50,7 @@ export class Job {
   @Prop({ type: [String], default: [] })
   images: string[];
 
-  @Prop({ default: true })
+  @Prop({ default: true, index: true })  // Agregado index: true aquí
   isActive: boolean;
 
   @Prop({ type: [String], default: [] })
@@ -65,5 +65,15 @@ export class Job {
 
 export const JobSchema = SchemaFactory.createForClass(Job);
 
-// Crear índice compuesto para búsquedas más comunes
+// Índices optimizados para mejorar rendimiento
+// Índice principal para findAll() - trabajos activos ordenados por fecha
+JobSchema.index({ isActive: 1, createdAt: -1 });
+
+// Índice para findByUserId() - trabajos de usuario específico ordenados por fecha
 JobSchema.index({ userId: 1, createdAt: -1 });
+
+// Índice para búsquedas por tipo de trabajo
+JobSchema.index({ jobType: 1, isActive: 1 });
+
+// Índice para búsquedas por ubicación (si se implementa en el futuro)
+JobSchema.index({ place: 1, isActive: 1 });

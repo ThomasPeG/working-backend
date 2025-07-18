@@ -53,33 +53,17 @@ export class CreateUserDto {
   @IsOptional()
   useGPS?: boolean; // Nueva propiedad
 
-  @IsEnum(['employee', 'employer', 'not_sure'])
+  @IsBoolean()
+  @IsOptional()
+  available?: boolean = true; // Nuevo campo: disponible para ofertas de trabajo
+
+  @IsEnum(['employee', 'employer', 'not_sure', 'both'])
   @IsOptional() 
   userType?: string = 'employee'; 
 
-  @IsString() 
-  @IsOptional() 
-  education?: string; 
-
-  @IsString() 
-  @IsOptional() 
-  experience?: string; 
-
   @IsOptional() 
   location?: { latitude: number; longitude: number }; 
-
-  @IsString() 
-  @IsOptional() 
-  jobDetails?: string; 
-
-  @IsString() 
-  @IsOptional() 
-  schedule?: string; 
-
-  @IsString() 
-  @IsOptional() 
-  salary?: string; 
-
+  
   @IsArray() 
   @IsOptional() 
   interests?: string[]; 

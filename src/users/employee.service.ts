@@ -306,7 +306,8 @@ export class EmployeeService {
       id: { not: userId }, // Excluir al usuario actual
       // Excluir usuarios sin nombre o fecha de nacimiento (perfil incompleto)
       name: { not: null },
-      birthDate: { not: null }
+      birthDate: { not: null },
+      isPrivate: false // Filtrar usuarios privados
     };
     console.log('Base where filter:', baseWhere);
 
