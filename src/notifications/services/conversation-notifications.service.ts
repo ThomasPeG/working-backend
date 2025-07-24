@@ -43,12 +43,15 @@ export class ConversationNotificationsService {
     return this.notificationRabbitmqService.createNotification(notification);
   }
 
-  async sendConversationStartedNotification(userId: string, initiatorName: string, conversationId: string) {
+  async sendConversationStartedNotification({
+    userId, conversationId, initiatorId, initiatorName, initiatorProfilePhoto}: 
+    {userId: string, conversationId: string, initiatorId: string, initiatorName: string, initiatorProfilePhoto: string}) {
+
     const notification: CreateNotificationDto = {
       userId,
       type: NotificationType.CONVERSATION_STARTED,
       message: `${initiatorName} inició una conversación contigo`,
-      metadata: { initiatorName, conversationId },
+      metadata: { initiator:{id: initiatorId, name: initiatorName, profilePhoto: initiatorProfilePhoto} },
       read: false,
       relatedId: conversationId
     };

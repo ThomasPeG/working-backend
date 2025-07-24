@@ -1,3 +1,4 @@
+import { ConversationNotificationsService } from './../notifications/services/conversation-notifications.service';
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -16,7 +17,7 @@ export class MessagesService {
     @InjectModel(Conversation.name) private conversationModel: Model<ConversationDocument>,
     private usersService: UsersService,
     private eventsGateway: EventsGateway,
-    private notificationRabbitmqService: NotificationRabbitmqService,
+    private conversationNotificationsService: ConversationNotificationsService
   ) {}
 
   // 1. Enviar un mensaje - Solo guarda y actualiza lastMessage
@@ -83,6 +84,17 @@ export class MessagesService {
         }
       });
       await newConversation.save();
+      if(newConversation._id) {
+        this.conversationNotificationsService.sendConversationStartedNotification(
+          {
+            userId: createMessageDto.receiverId,
+            conversationId: newConversation._id.toString(),
+            initiatorId: sender._id,
+            initiatorName: sender.name,
+            initiatorProfilePhoto: sender.profilePhoto,
+          }
+        )
+      }
     }
   
     // Enviar mensaje al receptor

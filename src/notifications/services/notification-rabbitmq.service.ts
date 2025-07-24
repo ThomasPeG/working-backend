@@ -61,8 +61,6 @@ export class NotificationRabbitmqService implements OnModuleInit, OnModuleDestro
   this.client.send('create_notification', notification).subscribe({
     next: (response) => {
       this.eventsGateway.sendNotificationToUser(notification.userId, response.data);
-      console.log('Notification sent successfully-----------:', response.data);
-      console.log('Notification sent successfully============:', response);
      },
     error: (error) => {
       console.error('Error sending notification:', error);
