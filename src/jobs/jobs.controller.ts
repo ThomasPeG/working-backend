@@ -27,9 +27,16 @@ export class JobsController {
     return this.jobsService.findAll(limitNum, pageNum);
   }
 
-  @Get('my-jobs')
-  findMyJobs(@Request() req) {
-    return this.jobsService.findByUserId(req.user.userId);
+  // Agregar esta nueva ruta
+  @Get('user/:userId')
+  getJobsByUserId(
+    @Param('userId') userId: string,
+    @Query('limit') limit: string,
+    @Query('page') page: string
+  ) {
+    // Por ahora, el servicio findByUserId no maneja paginación
+    // Podrías extenderlo o usar el método existente
+    return this.jobsService.findByUserId(userId);
   }
 
   @Get(':id')

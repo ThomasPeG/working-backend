@@ -1,6 +1,7 @@
+import { NotificationRabbitmqService } from '../notifications/services/notification-rabbitmq.service';
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Job, JobDocument } from './schemas/job.schema';
 import { JobComment, JobCommentDocument } from './schemas/job-comment.schema';
 import { JobShare, JobShareDocument } from './schemas/job-share.schema';
@@ -11,7 +12,7 @@ import { CreateJobShareDto } from './dto/create-job-share.dto';
 import { UsersService } from '../users/users.service';
 import { Response } from 'src/interfaces/response.interface';
 import { JobLike, JobLikeDocument } from './schemas/job-like.schema';
-import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from 'src/notifications/types/notification.types';
 
 @Injectable()
 export class JobsService {
@@ -21,7 +22,7 @@ export class JobsService {
     @InjectModel(JobShare.name) private jobShareModel: Model<JobShareDocument>,
     @InjectModel(JobLike.name) private jobLikeModel: Model<JobLikeDocument>,
     private usersService: UsersService,
-    private notificationsService: NotificationsService,
+    private notificationRabbitmqService: NotificationRabbitmqService,
   ) {}
 
   async create(userId: string, createJobDto: CreateJobDto): Promise<Response> {
@@ -33,21 +34,25 @@ export class JobsService {
       throw new NotFoundException(`User with ID ${userId} not found`);
     }
 
+    // Convertir jobType string a ObjectId si está presente
+    const jobData = {
+      ...createJobDto,
+      jobType: createJobDto.jobType ? new Types.ObjectId(createJobDto.jobType) : null
+    };
+
     const newJob = new this.jobModel({
       userId: userId,
-      ...createJobDto,
+      ...jobData,
     });
+    
     const JobSave = await newJob.save();
-    const jovId = JobSave._id
     // Crear una notificación para el usuario
-    const notificationSaved = await this.notificationsService.create({
-      userId: userId,
-      type: 'job_created',
-      message: `Has creado un nuevo trabajo: ${createJobDto.title}`,
-      data: { jobId: JobSave._id },
-      relatedId: jovId as string,
-    });
-    console.log("notificationSaved",notificationSaved);
+    // await this.notificationClientService.createNotification({
+    //   userId: userId,
+    //   message: `Has creado un nuevo trabajo: ${createJobDto.title}`,
+    //   type: NotificationType.JOB_POSTED,
+    //   metadata: { jobId: JobSave._id }
+    // });
     return {
       access_token: null,
       data: {job: JobSave},
@@ -123,15 +128,28 @@ export class JobsService {
     };
   }
 
-  async findByUserId(userId: string): Promise<Response> {
-    console.log(userId);
-    const jobs = await this.jobModel.find({ userId })
+  async findByUserId(userId: string, limit: number = 10, page: number = 1): Promise<Response> {
+    const skip = (page - 1) * limit;
+    
+    const total = await this.jobModel.countDocuments({ userId }).exec();
+    const jobs = await this.jobModel.find({ userId }).populate('jobType')
       .sort({ createdAt: -1 })
-      .allowDiskUse(true)  // Add this line
+      .skip(skip)
+      .limit(limit)
+      .allowDiskUse(true)
       .exec();
+      
     return {
       access_token: null,
-      data: { jobs },
+      data: { 
+        jobs,
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit)
+        }
+      },
       message: 'User jobs retrieved successfully',
     };
   }

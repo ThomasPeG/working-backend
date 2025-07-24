@@ -66,5 +66,15 @@ export class CreateUserDto {
   
   @IsArray() 
   @IsOptional() 
-  interests?: string[]; 
+  interests?: string[];
+
+  // Nuevos campos para términos y condiciones
+  @Type(() => Date)
+  @IsDate()
+  @IsOptional()
+  termsAcceptedAt?: Date;
+
+  @IsBoolean()
+  @IsOptional()
+  termsAccepted?: boolean;
 }

@@ -7,7 +7,7 @@ import { CreateMessageDto, MessageType } from './dto/create-message.dto';
 import { UsersService } from '../users/users.service';
 import { Response } from '../interfaces/response.interface';
 import { EventsGateway } from '../events/events.gateway';
-import { NotificationsService } from 'src/notifications/notifications.service';
+import { NotificationRabbitmqService } from 'src/notifications/services/notification-rabbitmq.service';
 
 @Injectable()
 export class MessagesService {
@@ -16,7 +16,7 @@ export class MessagesService {
     @InjectModel(Conversation.name) private conversationModel: Model<ConversationDocument>,
     private usersService: UsersService,
     private eventsGateway: EventsGateway,
-    private notificationsService: NotificationsService,
+    private notificationRabbitmqService: NotificationRabbitmqService,
   ) {}
 
   // 1. Enviar un mensaje - Solo guarda y actualiza lastMessage

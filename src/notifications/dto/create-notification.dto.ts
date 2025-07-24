@@ -1,13 +1,14 @@
-import { IsNotEmpty, IsString, IsOptional, IsObject, IsBoolean } from 'class-validator';
+import { IsNotEmpty, IsString, IsOptional, IsObject, IsBoolean, IsEnum } from 'class-validator';
+import { NotificationType } from '../types/notification.types';
 
 export class CreateNotificationDto {
   @IsString()
   @IsNotEmpty()
   userId: string;
 
-  @IsString()
+  @IsEnum(NotificationType)
   @IsNotEmpty()
-  type: string;
+  type: NotificationType;
 
   @IsString()
   @IsNotEmpty()
@@ -15,13 +16,16 @@ export class CreateNotificationDto {
 
   @IsObject()
   @IsOptional()
-  data?: any;
+  metadata?: any;
+
+  @IsBoolean()
+  read: boolean = false;
+
+  @IsString()
+  @IsOptional()
+  senderId?: string;
 
   @IsString()
   @IsOptional()
   relatedId?: string;
-
-  @IsString()
-  @IsOptional()
-  senderUserId?: string;
 }

@@ -1,3 +1,4 @@
+import { IsOptional } from 'class-validator';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 
@@ -15,15 +16,12 @@ export class Notification {
   message: string;
 
   @Prop({ type: Object, default: null })
-  data: any;
+  metadata: any;
 
   @Prop({ default: false })
   read: boolean;
 
-  @Prop({ type: String, default: null })
-  relatedId: string;
-
-  @Prop({ type: String, default: null })
+  @Prop({ type: String, default: null, required: false })
   senderUserId: string;
 }
 

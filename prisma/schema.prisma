@@ -15,25 +15,30 @@ model User {
   profilePhoto        String?
   gender              String?
   birthDate           DateTime?
-  birthplace          Json?        // { city: string, country: string }
-  residenceLocation   Json?        // { city: string, country: string }
   useGPS              Boolean?     @default(false)
   userType            String       @default("employee")
   userMembershipPlan  String       @default("FREE") // FREE, PREMIUM, VIP
   rating              Float?       @default(0)
   totalRatings        Int?         @default(0)
-  isPrivate           Boolean?     @default(false)
-  available           Boolean?     @default(true)
-  location            Json?
   phoneNumber         String?
-  isActive            Boolean?     @default(true)
   interests           String[]     @default([])
+  
   createdAt           DateTime     @default(now())
   updatedAt           DateTime     @updatedAt
   
+  isPrivate           Boolean?     @default(false)
+  available           Boolean?     @default(true)
+  isActive            Boolean?     @default(true)
+  
+  birthplace          Json?        // { city: string, country: string }
+  residenceLocation   Json?        // { city: string, country: string }
+  location            Json?
+  
+  termsAcceptedAt     DateTime?
+  termsAccepted       Boolean?     @default(false)
+
   // Relaciones
-  employeeProfile     Employee?    @relation("employeeProfile")
-  jobs                Job[]        @relation("EmployerJobs")
+  employeeProfile     Employee?    @relation("employeeProfile")    
   
   // Relaciones de amistad
   sentFriendRequests     Friendship[] @relation("FriendshipRequester")
@@ -60,28 +65,6 @@ model Employee {
   education       Education[]
   experiences     Experience[]
   user            User         @relation("employeeProfile", fields: [userId], references: [id])
-}
-
-model Job {
-  id                 String   @id @default(uuid())
-  userId             String   // Cambiado de employerId a userId para consistencia
-  title              String
-  description        String
-  location           Json?
-  schedule           String?
-  timeCommitment     String?
-  salary             Float?
-  languages          String[]  @default([])
-  requiredExperience Int?
-  requiredEducation  String?
-  requiredAge        Int?
-  contractType       String?
-  paymentDetails     String?
-  isActive           Boolean?  @default(true)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-  
-  employer           User     @relation("EmployerJobs", fields: [userId], references: [id])
 }
 
 model Experience {

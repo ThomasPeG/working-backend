@@ -1,6 +1,8 @@
-import { Controller, Get, Post, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
+
 import { AffinityService, AffinityResult } from './services/affinity.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { Response } from 'src/interfaces/response.interface';
 
 @Controller('affinity')
 @UseGuards(JwtAuthGuard)
@@ -21,10 +23,12 @@ export class AffinityController {
   @Get('job/:jobId/candidates')
   async getBestCandidates(
     @Param('jobId') jobId: string,
+    @Request() req,
     @Query('limit') limit?: string,
     @Query('minAffinity') minAffinity?: string
-  ): Promise<AffinityResult[]> {
+  ): Promise<Response> {
     return this.affinityService.findBestCandidates(
+      req.user.userId,
       jobId,
       limit ? parseInt(limit) : 20,
       minAffinity ? parseInt(minAffinity) : 30

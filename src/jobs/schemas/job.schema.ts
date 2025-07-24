@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { Document, Types } from 'mongoose';
 
 export type JobDocument = Job & Document;
 
@@ -14,11 +14,11 @@ export class Job {
   @Prop({ required: true })
   description: string;
 
-  @Prop({ type: Object, default: null })
-  place: string;
+  @Prop({ type: Types.ObjectId, ref: 'JobType', default: null })
+  jobType?: Types.ObjectId;  // ID del JobType (opcional)
 
   @Prop({ type: String, default: null })
-  jobType: string;
+  jobTypeNew?: string;  // NUEVO - Nombre personalizado cuando jobType es null (opcional)
   
   @Prop({ type: String, default: null })
   salary: number;
@@ -46,7 +46,7 @@ export class Job {
 
   @Prop({ type: String, default: null })
   contractType: string;
-  
+
   @Prop({ type: [String], default: [] })
   images: string[];
 
@@ -61,6 +61,17 @@ export class Job {
 
   @Prop({ default: 0 })
   sharesCount: number;
+
+  // Nuevos campos para ubicación estructurada
+  @Prop({ type: Types.ObjectId, ref: 'Country' })
+  locationCountryId?: Types.ObjectId;
+
+  @Prop({ type: Types.ObjectId, ref: 'City' })
+  locationCityId?: Types.ObjectId;
+
+  // Mantener campo legacy
+  @Prop()
+  place?: string;
 }
 
 export const JobSchema = SchemaFactory.createForClass(Job);

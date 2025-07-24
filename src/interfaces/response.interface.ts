@@ -1,5 +1,5 @@
 import { Employee } from "./employee.interface";
-import { Job } from "./job.interface";
+import { IJob } from "./job.interface";
 import { User } from "./user.interface";
 import { Education } from "./education.interface";
 import { Experience } from "./experience.interface";

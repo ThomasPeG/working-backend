@@ -292,8 +292,8 @@ export class EmployeeService {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: {
-        employeeProfile: true,
-        jobs: true
+        employeeProfile: true
+        // Remove 'jobs: true' since jobs is a Json[] field, not a relation
       }
     });
 
@@ -362,56 +362,56 @@ export class EmployeeService {
     recommendedUsers  = [...similarUsers, ...diverseUsers];
     }
     // CASO 2: Usuario es empleador con trabajos registrados
-    else if (user.userType === 'empleador' && user.jobs && user.jobs.length > 0) {
-      // Obtener los tipos de trabajos del empleador
-      const jobTitles = user.jobs.map(job => job.title);
+    // else if (user.userType === 'empleador' && user.jobs && user.jobs.length > 0) {
+    //   // Obtener los tipos de trabajos del empleador
+    //   const jobTitles = user.jobs.map(job => job.title);
 
-      // Buscar empleados con intereses laborales similares a los trabajos del empleador (70% del límite)
-      const similarUsersCount = Math.ceil(limit * 0.7);
-      const similarUsers = await this.prisma.user.findMany({
-        where: {
-          ...baseWhere,
-          userType: 'employee',
-          employeeProfile: {
-            jobInterests: { hasSome: jobTitles }
-          }
-        },
-        include: {
-          employeeProfile: {
-            include: {
-              experiences: true,
-              education: true
-            }
-          }
-        },
-        take: similarUsersCount
-      });
+    //   // Buscar empleados con intereses laborales similares a los trabajos del empleador (70% del límite)
+    //   const similarUsersCount = Math.ceil(limit * 0.7);
+    //   const similarUsers = await this.prisma.user.findMany({
+    //     where: {
+    //       ...baseWhere,
+    //       userType: 'employee',
+    //       employeeProfile: {
+    //         jobInterests: { hasSome: jobTitles }
+    //       }
+    //     },
+    //     include: {
+    //       employeeProfile: {
+    //         include: {
+    //           experiences: true,
+    //           education: true
+    //         }
+    //       }
+    //     },
+    //     take: similarUsersCount
+    //   });
 
-      // Calcular cuántos usuarios diversos necesitamos
-      const diverseCount = limit - similarUsers.length;
+    //   // Calcular cuántos usuarios diversos necesitamos
+    //   const diverseCount = limit - similarUsers.length;
 
-      // Buscar usuarios diversos para completar el límite
-      let diverseUsers :any[] = [];
-      if (diverseCount > 0) {
-        diverseUsers = await this.prisma.user.findMany({
-          where: {
-            ...baseWhere,
-            id: { notIn: similarUsers.map(u => u.id) } // Excluir usuarios ya incluidos
-          },
-          include: {
-            employeeProfile: {
-              include: {
-                experiences: true,
-                education: true
-              }
-            }
-          },
-          take: diverseCount
-        });
-      }
+    //   // Buscar usuarios diversos para completar el límite
+    //   let diverseUsers :any[] = [];
+    //   if (diverseCount > 0) {
+    //     diverseUsers = await this.prisma.user.findMany({
+    //       where: {
+    //         ...baseWhere,
+    //         id: { notIn: similarUsers.map(u => u.id) } // Excluir usuarios ya incluidos
+    //       },
+    //       include: {
+    //         employeeProfile: {
+    //           include: {
+    //             experiences: true,
+    //             education: true
+    //           }
+    //         }
+    //       },
+    //       take: diverseCount
+    //     });
+    //   }
 
-     recommendedUsers = [...similarUsers, ...diverseUsers];      
-    }
+    //  recommendedUsers = [...similarUsers, ...diverseUsers];      
+    // }
     // CASO 3: Usuario sin perfil de empleado o sin intereses laborales o empleador sin trabajos
     else {
       recommendedUsers = await this.prisma.user.findMany({

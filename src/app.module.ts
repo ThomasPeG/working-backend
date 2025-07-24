@@ -12,6 +12,7 @@ import { JobsModule } from './jobs/jobs.module';
 import { MessagesModule } from './messages/messages.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { EventsModule } from './events/events.module';
+import { LocationsModule } from './locations/locations.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { EventsModule } from './events/events.module';
     MessagesModule,
     NotificationsModule,
     EventsModule, // Añadimos el nuevo módulo de eventos
+    LocationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

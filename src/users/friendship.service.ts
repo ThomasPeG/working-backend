@@ -1,14 +1,15 @@
-import { NotificationsService } from './../notifications/notifications.service';
 import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateFriendshipDto } from './dto/friendship/create-friendship.dto';
 import { UpdateFriendshipDto } from './dto/friendship/update-friendship.dto';
 import { Response } from '../interfaces/response.interface';
+import { NotificationType } from 'src/notifications/types/notification.types';
+import { FriendRequestNotificationsService } from 'src/notifications/services/friend-request-notifications.service';
 
 @Injectable()
 export class FriendshipService {
   constructor(private prisma: PrismaService,
-    private notificationsService: NotificationsService
+    private friendRequestNotificationsService: FriendRequestNotificationsService
   ) {}
 
   // Enviar solicitud de amistad
@@ -40,7 +41,8 @@ export class FriendshipService {
       where: { id: userId },
       select: {
         id: true,
-        name: true
+        name: true,
+        profilePhoto: true
       }
     });
 
@@ -60,24 +62,18 @@ export class FriendshipService {
         addressee: true
       }
     });
+    if (!friendship?.requester?.name) {
+      throw new NotFoundException('No se pudo obtener el nombre del solicitante');
+    }
 
-    this.notificationsService.create(
+    this.friendRequestNotificationsService.sendFriendRequestNotification(
       {
         userId: createFriendshipDto.addresseeId,
-        type: "friendship_request",
-        message: `El usuario ${user!.name} te ha enviado una solicitud de amistad`,
-        data: {
-          friendshipId: friendship.id,
-          requester: {
-            id: friendship.requester.id,
-            name: friendship.requester.name,
-            email: friendship.requester.email,
-            profilePhoto: friendship.requester.profilePhoto
-          }
-        },
-        relatedId: friendship.id,
-        senderUserId: userId
-      }
+        requesterName: friendship.requester.name,
+        requesterId: friendship.requester.id,
+        requestId: friendship.id,
+        requesterProfilePhoto: user?.profilePhoto || ''
+      }     
     );
 
     return {
@@ -136,27 +132,20 @@ export class FriendshipService {
       });
 
       result = { friendship: updatedFriendship };
-      message = 'Solicitud de amistad aceptada exitosamente';
-
-      // Enviar notificación al solicitante de que su solicitud fue aceptada
-      this.notificationsService.create({
-        userId: friendship.requesterId,
-        type: "friendship_request_response",
-        message: `${friendship.addressee.name} ha aceptado tu solicitud de amistad`,
-        data: {
-          friendshipId: friendship.id,
-          status: 'accepted',
-          addressee: {
-            id: friendship.addressee.id,
-            name: friendship.addressee.name,
-            email: friendship.addressee.email,
-            profilePhoto: friendship.addressee.profilePhoto
-          }
-        },
-        relatedId: friendship.id,
-        senderUserId: userId
-      });
+      message = 'Solicitud de amistad aceptada exitosamente'; 
     }
+//VERIFICAR SI LA NOTIFICACION ESTA BIEN IMPLEMENTADA AQUI
+    if (!friendship.requester.name) {
+        throw new NotFoundException('No se pudo obtener el nombre del solicitante');
+      }
+      // Enviar notificación al solicitante de que su solicitud fue aceptada
+      this.friendRequestNotificationsService.sendFriendRequestStatusNotification(
+        friendship.requesterId,
+        friendship.requester.name,
+        friendship.requester.id,
+        friendship.id,
+        updateFriendshipDto.status!
+      );
 
     return {
       access_token: null,

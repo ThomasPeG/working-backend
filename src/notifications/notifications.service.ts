@@ -1,162 +1,89 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { Notification, NotificationDocument } from './schemas/notification.schema';
-import { CreateNotificationDto } from './dto/create-notification.dto';
-import { UpdateNotificationDto } from './dto/update-notification.dto';
-import { Response } from 'src/interfaces/response.interface';
-import { EventsGateway } from '../events/events.gateway';
+// import { Injectable } from '@nestjs/common';
+// import { NotificationRabbitmqService } from './services/notification-rabbitmq.service';
+// import { KafkaClientService } from './services/kafka-client.service';
+// import { NotificationType } from './types/notification.types';
 
-@Injectable()
-export class NotificationsService {
-  constructor(
-    @InjectModel(Notification.name) private notificationModel: Model<NotificationDocument>,
-    private eventsGateway: EventsGateway, // Inyectamos el gateway
-  ) {}
+// @Injectable()
+// export class NotificationsService {
+//   constructor(
+//     private notificationRabbitmq: NotificationRabbitmqService,
+//     private kafkaClient: KafkaClientService,
+//   ) {}
 
-  async create(createNotificationDto: CreateNotificationDto): Promise<Response> {
-    const newNotification = new this.notificationModel(createNotificationDto);
-    const savedNotification = await newNotification.save();
-    
-    // Enviar la notificación en tiempo real al usuario
-    this.eventsGateway.sendNotificationToUser(
-      createNotificationDto.userId,
-      savedNotification
-    );
-    
-    return {
-      access_token: null,
-      data: { notification: savedNotification },
-      message: 'Notification created successfully',
-    };
-  }
+//   async dcreateNotification({userId, message, type, metadata}: {userId: string, message: string, type: NotificationType.JOB_POSTED, metadata?: any}) {
+//     return this.notificationRabbitmq.createNotification({
+//       userId,
+//       message,
+//       type,
+//       metadata,
+//     });
+//   }
 
-  async findAllForUser(userId: string, limit: number = 10, page: number = 1): Promise<Response> {
-    // Calcular el número de documentos a saltar
-    const skip = (page - 1) * limit;
-    
-    // Obtener el total de notificaciones para el usuario
-    const total = await this.notificationModel.countDocuments({ userId }).exec();
-    
-    // Obtener las notificaciones con paginación
-    const notifications = await this.notificationModel.find({ userId })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .exec();
-    
-    return {
-      access_token: null,
-      data: { 
-        notifications,
-        pagination: {
-          total,
-          page,
-          limit,
-          totalPages: Math.ceil(total / limit)
-        }
-      },
-      message: 'Notifications retrieved successfully',
-    };
-  }
+//   // async dgetUserNotifications(userId: string) {
+//   //   return this.notificationRabbitmq.getUserNotifications(userId);
+//   // }
 
-  async findUnreadForUser(userId: string): Promise<Response> {
-    const notifications = await this.notificationModel.find({ userId, read: false })
-      .sort({ createdAt: -1 })
-      .exec();
-    
-    return {
-      access_token: null,
-      data: { notifications },
-      message: 'Unread notifications retrieved successfully',
-    };
-  }
+//   async dmarkAsRead(id: string, userId: string) {
+//     return this.notificationRabbitmq.markNotificationAsRead(id);
+//   }
 
-  async findOne(id: string): Promise<Notification> {
-    const notification = await this.notificationModel.findById(id).exec();
-    if (!notification) {
-      throw new NotFoundException(`Notification with ID ${id} not found`);
-    }
-    return notification;
-  }
+//   // Método para enviar notificaciones masivas usando Kafka
+//   async dsendBulkNotifications(notifications: any[]) {
+//     return this.kafkaClient.sendBulkNotifications(notifications);
+//   }
 
-  async update(id: string, userId: string, updateNotificationDto: UpdateNotificationDto): Promise<Response> {
-    const notification = await this.findOne(id);
-    
-    // Verificar que la notificación pertenece al usuario
-    if (notification.userId !== userId) {
-      throw new NotFoundException(`Notification with ID ${id} not found for this user`);
-    }
-    
-    const updatedNotification = await this.notificationModel.findByIdAndUpdate(
-      id, 
-      updateNotificationDto, 
-      { new: true }
-    ).exec();
-    
-    return {
-      access_token: null,
-      data: { notification: updatedNotification },
-      message: 'Notification updated successfully',
-    };
-  }
+//   // Método para enviar notificación de sistema a múltiples usuarios
+//   async dsendSystemNotification(userIds: string[], message: string, metadata?: any) {
+//     return this.kafkaClient.sendSystemNotification(userIds, message, metadata);
+//   }
 
-  async markAsRead(id: string, userId: string): Promise<Response> {
-    const result = await this.update(id, userId, { read: true });
-    
-    // Notificar al cliente que la notificación ha sido marcada como leída
-    if (result.data?.notification) {
-      this.eventsGateway.sendNotificationToUser(userId, {
-        type: 'notification_read',
-        notificationId: id
-      });
-    }
-    
-    return result;
-  }
+//   // Nuevas funciones implementadas
 
-  async markAllAsRead(userId: string): Promise<Response> {
-    await this.notificationModel.updateMany(
-      { userId, read: false },
-      { read: true }
-    ).exec();
-    
-    // Notificar al cliente que todas las notificaciones han sido marcadas como leídas
-    this.eventsGateway.sendNotificationToUser(userId, {
-      type: 'all_notifications_read'
-    });
-    
-    return {
-      access_token: null,
-      data: null,
-      message: 'All notifications marked as read',
-    };
-  }
+//   /**
+//    * Encuentra todas las notificaciones para un usuario con paginación
+//    */
+//   async dfindAllForUser(userId: string, limit: number = 10, page: number = 1) {
+//     return this.notificationRabbitmq.send('get_user_notifications_paginated', {
+//       userId,
+//       limit,
+//       page
+//     }).toPromise();
+//   }
 
-  async remove(id: string, userId: string): Promise<Response> {
-    const notification = await this.findOne(id);
-    
-    // Verificar que la notificación pertenece al usuario
-    if (notification.userId !== userId) {
-      throw new NotFoundException(`Notification with ID ${id} not found for this user`);
-    }
-    
-    await this.notificationModel.findByIdAndDelete(id).exec();
-    
-    return {
-      access_token: null,
-      data: null,
-      message: 'Notification deleted successfully',
-    };
-  }
+//   /**
+//    * Encuentra todas las notificaciones no leídas para un usuario
+//    */
+//   async dfindUnreadForUser(userId: string) {
+//     return this.notificationRabbitmq.send('get_unread_notifications', {
+//       userId
+//     }).toPromise();
+//   }
 
-  async removeAllForUser(userId: string): Promise<Response> {
-    await this.notificationModel.deleteMany({ userId }).exec();
-    
-    return {
-      access_token: null,
-      data: null,
-      message: 'All notifications deleted successfully',
-    };
-  }
-}
+//   /**
+//    * Marca todas las notificaciones de un usuario como leídas
+//    */
+//   async dmarkAllAsRead(userId: string) {
+//     return this.notificationRabbitmq.send('mark_all_notifications_read', {
+//       userId
+//     }).toPromise();
+//   }
+
+//   /**
+//    * Elimina una notificación específica para un usuario
+//    */
+//   async dremove(id: string, userId: string) {
+//     return this.notificationRabbitmq.send('remove_notification', {
+//       id,
+//       userId
+//     }).toPromise();
+//   }
+
+//   /**
+//    * Elimina todas las notificaciones de un usuario
+//    */
+//   async dremoveAllForUser(userId: string) {
+//     return this.notificationRabbitmq.send('remove_all_notifications', {
+//       userId
+//     }).toPromise();
+//   }
+// }
