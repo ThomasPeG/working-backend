@@ -13,6 +13,7 @@ import { MessagesModule } from './messages/messages.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { EventsModule } from './events/events.module';
 import { LocationsModule } from './locations/locations.module';
+import { GatewayModule } from './gateway/gateway.module'; // Nuevo módulo gateway
 
 @Module({
   imports: [
@@ -20,6 +21,9 @@ import { LocationsModule } from './locations/locations.module';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    
+    // Gateway Module - Punto central de orquestación
+    GatewayModule,
     
     // Prisma Module
     PrismaModule,
@@ -41,7 +45,7 @@ import { LocationsModule } from './locations/locations.module';
     JobsModule,
     MessagesModule,
     NotificationsModule,
-    EventsModule, // Añadimos el nuevo módulo de eventos
+    EventsModule,
     LocationsModule,
   ],
   controllers: [AppController],
